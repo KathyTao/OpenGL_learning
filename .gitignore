@@ -58,3 +58,4 @@ Projects/FirstOpenGL/FirstOpenGL/Debug/vc140.idb
 *.pdb
 Projects/FirstOpenGL/FirstOpenGL/FirstOpenGL.vcxproj.filters
 *.opendb
+*.ipch
