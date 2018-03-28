@@ -45,3 +45,16 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.suo
+*.log
+Projects/FirstOpenGL/FirstOpenGL.VC.VC.opendb
+*.tlog
+Projects/FirstOpenGL/FirstOpenGL/Debug/glad.obj
+*.obj
+*.exe
+Projects/FirstOpenGL/Debug/FirstOpenGL.ilk
+*.db
+Projects/FirstOpenGL/FirstOpenGL/Debug/vc140.idb
+*.pdb
+Projects/FirstOpenGL/FirstOpenGL/FirstOpenGL.vcxproj.filters
+*.opendb
