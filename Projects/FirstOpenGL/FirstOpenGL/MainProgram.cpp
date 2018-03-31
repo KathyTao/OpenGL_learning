@@ -5,16 +5,22 @@
 #include <iostream>
 
 #include "DataFile.h"
-#include "ShaderFuncs.h"
+#include "shader_s.h"
+#include "stb_image.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-void bindingObjects(unsigned int *VBO, unsigned int *VAO, float *vertices);
+void bindingObjects(unsigned int *VBO, unsigned int *VAO, unsigned int *EBO, float *vertices);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
+int width, height, nrChannels;
+unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+
+// stores how much we're seeing of either texture
+float mixValue = 0.2f;
 
 int main()
 {
@@ -67,13 +73,76 @@ int main()
   //bindingObjects(VBO, VAO, firstTriangle);
   //bindingObjects(VBO + 1, VAO + 1, secondTriangle);
 
-  //Color vertex
-  int vertexShader = defineVertexShader(mVertexShaderSource_withColor);
-  int fragmentShader = defineFragmentShader(mFragmentShaderSource_norm);
-  int shaderProgram = createShaderProgram(vertexShader, fragmentShader);
+  ////Color vertex
+  //int vertexShader = defineVertexShader(mVertexShaderSource_withColor);
+  //int fragmentShader = defineFragmentShader(mFragmentShaderSource_norm);
+  //int shaderProgram = createShaderProgram(vertexShader, fragmentShader);
 
-  unsigned int VAO, VBO;
-  bindingObjects(&VBO, &VAO, vertices);
+  Shader ourShader("../shader_3.vs", "../shader_3.fs");
+
+  unsigned int VAO, VBO, EBO;
+  bindingObjects(&VBO, &VAO, &EBO, vertices);
+
+  // load and create a texture 
+  // -------------------------
+  unsigned int texture1, texture2;
+  // texture 1
+  // ---------
+  glGenTextures(1, &texture1);
+  glBindTexture(GL_TEXTURE_2D, texture1);
+  // set the texture wrapping parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  // set texture filtering parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // load image, create texture and generate mipmaps
+  int width, height, nrChannels;
+  stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+                                          // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
+  unsigned char *data = stbi_load("textures/container.jpg", &width, &height, &nrChannels, 0);
+  if (data)
+  {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  else
+  {
+    std::cout << "Failed to load texture1" << std::endl;
+  }
+  stbi_image_free(data);
+  // texture 2
+  // ---------
+  glGenTextures(1, &texture2);
+  glBindTexture(GL_TEXTURE_2D, texture2);
+  // set the texture wrapping parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  // set texture filtering parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // load image, create texture and generate mipmaps
+  data = stbi_load("textures/awesomeface.png", &width, &height, &nrChannels, 0);
+  if (data)
+  {
+    // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  else
+  {
+    std::cout << "Failed to load texture2" << std::endl;
+  }
+  stbi_image_free(data);
+
+  // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+  // -------------------------------------------------------------------------------------------
+  ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
+                   // either set it manually like so:
+  glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
+  // or set it via the texture class
+  ourShader.setInt("texture2", 1);
+  glUniform1f(glGetUniformLocation(ourShader.ID, "alpha"), 0.3);
 
   // render loop
   // -----------
@@ -106,9 +175,17 @@ int main()
     //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     //part 2
-    glUseProgram(shaderProgram);
+    //int vertexPositionLocation = glGetUniformLocation(ourShader.ID, "shiftHorizontal");
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+
+    ourShader.use();
+    //glUniform3f(vertexPositionLocation, 0.5f, 0.0f, 0.0f);
+    glUniform1f(glGetUniformLocation(ourShader.ID, "alpha"), mixValue);
     glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     // check and call events and swap the buffers
     glfwPollEvents();
@@ -119,11 +196,11 @@ int main()
   //Part 1
   /*glDeleteVertexArrays(2, VAO);
   glDeleteBuffers(2, VBO);*/
-  //glDeleteBuffers(1, &EBO);
-
+ 
   //Part 2
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
+  glDeleteBuffers(1, &EBO);
   // glfw: terminate, clearing all previously allocated GLFW resources.
   // ------------------------------------------------------------------
   glfwTerminate();
@@ -136,6 +213,19 @@ void processInput(GLFWwindow *window)
 {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
+  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+  {
+    mixValue += 0.001f; // change this value accordingly (might be too slow or too fast based on system hardware)
+    if (mixValue >= 1.0f)
+      mixValue = 1.0f;
+  }
+  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+  {
+    mixValue -= 0.001f; // change this value accordingly (might be too slow or too fast based on system hardware)
+    if (mixValue <= 0.0f)
+      mixValue = 0.0f;
+  }
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -147,9 +237,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
   glViewport(0, 0, width, height);
 }
 
-void bindingObjects(unsigned int *VBO, unsigned int *VAO, float vertices[])
+void bindingObjects(unsigned int *VBO, unsigned int *VAO, unsigned int *EBO, float vertices[])
 {
   glGenBuffers(1, VBO);
+  glGenBuffers(1, EBO);
   glGenVertexArrays(1, VAO);
 
   // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -157,18 +248,21 @@ void bindingObjects(unsigned int *VBO, unsigned int *VAO, float vertices[])
 
   // 2. copy our vertices array in a vertex buffer for OpenGL to use
   glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-  glBufferData(GL_ARRAY_BUFFER, 18*sizeof(float), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, 32*sizeof(float), vertices, GL_STATIC_DRAW);
 
   // 3. copy our index array in a element buffer for OpenGL to use
-  /*glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);*/
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
   // 4. then set the vertex attributes pointers
   // position attribute
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
   // color attribute
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
+
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+  glEnableVertexAttribArray(2);
 
   // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
   glBindBuffer(GL_ARRAY_BUFFER, 0);

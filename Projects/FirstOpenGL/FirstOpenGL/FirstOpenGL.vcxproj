@@ -119,11 +119,12 @@
     <ClCompile Include="DataFile.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="MainProgram.cpp" />
-    <ClCompile Include="ShaderFuncs.cpp" />
+    <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\TPLibs\include\stb_image.h" />
     <ClInclude Include="DataFile.h" />
-    <ClInclude Include="ShaderFuncs.h" />
+    <ClInclude Include="shader_s.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
